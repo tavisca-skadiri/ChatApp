@@ -6,26 +6,40 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
-
-@ServerEndpoint("/endpoint2")
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+@ServerEndpoint("/endpoint")
 public class ChatWebSocket {
     private ChatHelper chatHelper;
-    public ChatWebSocket() {
+    public ChatWebSocket(){
         this.chatHelper = new ChatHelper();
     }
     @OnOpen
-    public void onOpen(Session session) {
-        System.out.println("Open Connenction: " + session.getId());
-        ChatHelper.sessionMap.put(session.getId(),session);
+    public void onOpen(Session session){
+        System.out.println("Open connection: " + session.getId());
+        try {
+            session.getBasicRemote().sendText("Your Session Id is: " + session.getId());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Thread t1 = new Thread(this.chatHelper,session.getId());
+        t1.start();
+        ChatHelper.sessionMap.put(session.getId(), session);
     }
     @OnClose
-    public void onClose(Session session) {
-        System.out.println("Close Connection: " + session.getId());
+    public void onClose(Session session){
+        System.out.println("Closing connection: " + session.getId());
+        try {
+            session.getBasicRemote().sendText("Your Session with SessionId " + session.getId() + " is closed");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         ChatHelper.sessionMap.remove(session.getId());
     }
     @OnMessage
-    public void onMessage(String message, Session session) {
-        System.out.println("Received message: From " + session.getId() + ", Message is " + message);
-        chatHelper.sendMessage(message,session.getId());
+    public void onMessage(String message, Session session)  {
+        System.out.println("Received message from: " + session.getId() + " Message is " + message );
+        chatHelper.sendMessage(message, session.getId());
     }
 }
